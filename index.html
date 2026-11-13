@@ -1,0 +1,1508 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>神主牌位助手</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.js"></script>
+<style>
+:root{--ink:#22262B;--mute:#5B636B;--paper:#EDF0EC;--line:#D3D8D2;--wood:#6B4423;--red:#B3261E;--red-d:#8F1D17;--tint:#FBECEA;
+--kai:"BiauKai","DFKai-SB","Kaiti TC","Kaiti","標楷體",serif;
+--wood-bg:linear-gradient(135deg,#d2a679 0%,#b37746 100%);--wood-border:#6b4423;--inner-bg:#ffffff;--text-dark:#222;--text-light:#f5f5f5}
+*{box-sizing:border-box}
+button,input,select,textarea{font-family:inherit}
+[hidden]{display:none!important}
+body{margin:0;background:var(--paper);color:var(--ink);font:18px/1.6 "Microsoft JhengHei","PingFang TC","Noto Sans TC",sans-serif}
+:focus-visible{outline:3px solid #1F6FEB;outline-offset:2px}
+.app{max-width:1280px;margin:0 auto;padding:16px 20px 48px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-bottom:14px}
+.top h1{margin:0;font:700 1.7rem/1.2 var(--kai);letter-spacing:.2em;color:var(--wood)}
+.top-actions{display:flex;gap:8px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:46px;padding:0 18px;border:1.5px solid #B9BFB8;border-radius:10px;background:#fff;color:var(--ink);font-weight:600;font-size:1rem;cursor:pointer}
+.btn:hover{border-color:var(--wood)}
+.btn.primary{background:var(--red);border-color:var(--red);color:#fff}
+.btn.primary:hover{background:var(--red-d)}
+.btn.big{min-height:58px;font-size:1.1rem;width:100%}
+.btn.small{min-height:38px;padding:0 12px;font-size:.92rem}
+.btn.danger{color:var(--red);border-color:#E3B5B1}
+.btn:disabled{opacity:.5;cursor:wait}
+.sr-file{position:absolute;width:1px;height:1px;opacity:0}
+.btn:has(.sr-file:focus-visible){outline:3px solid #1F6FEB;outline-offset:2px}
+.stepper{display:flex;gap:8px;list-style:none;margin:0 0 18px;padding:0}
+.stepper li{flex:1}
+.stepper button{width:100%;display:flex;align-items:center;gap:10px;min-height:52px;padding:6px 14px;border:1.5px solid var(--line);border-radius:12px;background:#fff;color:var(--mute);font-weight:600;font-size:1rem;cursor:pointer;text-align:left}
+.stepper .n{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#E4E8E3;color:var(--ink);font-size:.95rem}
+.stepper .on{border-color:var(--red);color:var(--ink);background:#fff;box-shadow:0 0 0 1px var(--red)}
+.stepper .on .n{background:var(--red);color:#fff}
+.stepper .done .n{background:#2E7D4F;color:#fff}
+.layout{display:grid;grid-template-columns:minmax(380px,470px) 1fr;gap:24px;align-items:start}
+.panel,.stage{background:#fff;border:1px solid var(--line);border-radius:14px}
+.panel{padding:26px}
+.panel h2{margin:0 0 4px;font-size:1.45rem}
+.lead{margin:0 0 22px;color:var(--mute)}
+.field{margin-bottom:18px}
+.field>label,.lbl{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px;font-weight:700}
+.req{color:var(--red);font-size:.88rem;font-weight:600}
+.hint{margin-top:4px;font-size:.9rem;color:var(--mute)}
+input[type=text],textarea{width:100%;min-height:50px;padding:10px 13px;border:1.5px solid #B9BFB8;border-radius:10px;background:#fff;font:inherit;color:var(--ink)}
+input[type=text]:focus,textarea:focus{border-color:var(--ink)}
+textarea{resize:vertical;min-height:90px}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px}
+.choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:18px}
+.choice{position:relative;padding:12px 14px;border:2px solid var(--line);border-radius:12px;background:#fff;color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.choice b{display:block}
+.choice small{display:block;color:var(--mute);font-size:.88rem;line-height:1.4}
+.choice[aria-pressed=true]{border-color:var(--red);background:var(--tint)}
+.choice[aria-pressed=true]::after{content:"✓";position:absolute;top:8px;right:12px;color:var(--red);font-weight:700}
+.choices.small{grid-template-columns:repeat(auto-fit,minmax(96px,1fr))}
+.choices.small .choice{padding:8px 12px;text-align:center}
+.choices.small .choice::after{display:none}
+.fortune-tag{font-size:.88rem;font-weight:700}
+.fortune-tag:empty{display:none}
+.tip{margin:0 0 18px;padding:10px 14px;border-radius:10px;background:#F3F5F2;font-size:.92rem;color:var(--mute)}
+details{margin-bottom:18px}
+summary{display:flex;align-items:center;gap:8px;min-height:44px;font-weight:700;color:var(--wood);cursor:pointer}
+details>.field:first-of-type,details>input{margin-top:6px}
+.sheet{margin-bottom:18px;padding:18px;border:1.5px solid var(--line);border-radius:14px}
+.sheet-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.sheet-head h3{margin:0;font-size:1.15rem}
+.person{margin-top:16px;padding-top:16px;border-top:1px dashed #B9BFB8}
+.person h4{margin:0 0 10px;color:var(--wood)}
+.dl-grid{display:grid;gap:10px;margin-bottom:22px}
+.nav{display:flex;justify-content:space-between;gap:10px;margin-top:26px;padding-top:20px;border-top:1px solid var(--line)}
+.show-preview{display:none}
+#text-output{min-height:200px;font:1rem/1.7 var(--kai);background:#FAFAF8}
+.stage{position:sticky;top:16px;overflow:hidden}
+.stage-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;border-bottom:1px solid var(--line);background:#F6F8F5}
+.tab-btn{min-height:44px;padding:0 18px;border:1.5px solid transparent;border-radius:10px;background:transparent;color:var(--ink);font-weight:600;font-size:1rem;cursor:pointer}
+.tab-btn:hover{border-color:#B9BFB8}
+.tab-btn.active{background:var(--ink);color:#fff}
+.tab-btn.hidden{display:none}
+#overview-col-control{display:none;align-items:center;gap:8px;margin-left:auto;font-weight:600}
+#overview-col-control select{min-height:42px;padding:0 10px;border:1.5px solid #B9BFB8;border-radius:10px;font:inherit;background:#fff}
+.stage-body{max-height:calc(100vh - 110px);overflow:auto}
+.preview-content{display:none;justify-content:center;padding:24px;min-height:560px}
+.preview-content.active{display:flex}
+.tablet-view-wrapper{font-family:var(--kai)}
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);padding:12px 22px;border-radius:99px;background:var(--ink);color:#fff;opacity:0;pointer-events:none;transition:opacity .2s;z-index:9}
+.toast.show{opacity:1}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* ===== 牌位本體樣式（沿用原版，外觀不變）===== */
+        /* 視覺預覽外層容器：讓管理資訊面板與牌位圖示垂直排列 */
+        .tablet-view-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            gap: 18px;
+        }
+
+        /* 管理資訊面板 - 風格與整體木牌配色一致 */
+        .info-panel {
+            width: 100%;
+            max-width: 100%;
+            background: #fdf8f0;
+            border: 1px solid #d9c3a0;
+            border-radius: 8px;
+            padding: 14px 20px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            font-size: 0.92rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+        .info-item {
+            display: flex;
+            align-items: baseline;
+            gap: 4px;
+            min-width: 0;
+        }
+        .info-item.full {
+            grid-column: 1 / -1;
+        }
+        .info-label {
+            color: #6b4423;
+            font-weight: bold;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .info-value {
+            color: #333;
+            word-break: break-word;
+        }
+
+        /* 外牌外框 */
+        .outer-tablet {
+            width: 260px;
+            height: 470px;
+            background: var(--wood-bg);
+            border: 8px solid var(--wood-border);
+            border-radius: 20px 20px 0 0;
+            color: var(--text-dark);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 35px 15px 40px 15px;
+            box-sizing: border-box;
+            box-shadow: 5px 10px 20px rgba(0, 0, 0, 0.3);
+            flex-shrink: 0;
+        }
+
+        /* 堂號樣式 - 緊貼主文頂部 */
+        .tanghao {
+            writing-mode: horizontal-tb;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+            font-size: 1.6rem;
+            font-weight: bold;
+            margin-bottom: 4px;
+            width: 100%;
+            flex-shrink: 0;
+        }
+
+        /* 內文主體區塊 */
+        .tablet-body {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            flex: 1;
+            align-items: flex-end;
+            min-height: 0;
+        }
+
+        /* 中央主文與堂號的包裹容器 */
+        .col-middle-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            height: 100%;
+            flex: 1;
+            min-width: 0;
+        }
+
+        /* 左中右三行 */
+        .col-right,
+        .col-left,
+        .col-middle {
+            font-size: 1.7rem;
+            font-weight: bold;
+            letter-spacing: 2px;
+            text-align: center;
+            writing-mode: vertical-rl;
+            text-orientation: upright;
+            height: auto;
+            flex-shrink: 0;
+            line-height: 1.4;
+        }
+
+        #prev-inner-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        /* 內牌木片樣式 - 已修改為白底黑字與加強識別度 */
+        .inner-tablet {
+            width: 240px;
+            min-height: 300px;
+            background: var(--inner-bg); /* 對應白色 #ffffff */
+            border: 1px solid #ccc;      /* 新增細邊框，確保在白色背景下載時看得見木片邊界 */
+            border-radius: 5px;
+            color: #000000;              /* 確保為黑色字體 */
+            padding: 25px 10px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 3px 6px 15px rgba(0, 0, 0, 0.15); /* 微調陰影使其在白底上更自然不突兀 */
+            box-sizing: border-box;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        /* 使用 CSS Grid 明確劃分三行區塊 */
+        .inner-person-col {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr 1fr;
+            justify-items: center;
+            align-items: start;
+            height: 100%;
+            flex: 1;
+            max-width: 120px;
+            border-right: 1px dashed rgba(0, 0, 0, 0.2);
+            padding-right: 4px;
+            padding-left: 4px;
+            box-sizing: border-box;
+            min-width: 0;
+        }
+        .inner-person-col:last-child {
+            border-right: none;
+            padding-right: 0;
+        }
+
+        .inner-side {
+            font-size: 0.85rem;
+            padding-top: 25px;
+            writing-mode: vertical-rl;
+            text-orientation: upright;
+            line-height: 1.3;
+            white-space: nowrap;
+            overflow: visible;
+        }
+
+        .inner-main {
+            font-size: 1.2rem;
+            font-weight: bold;
+            writing-mode: vertical-rl;
+            text-orientation: upright;
+            line-height: 1.3;
+            white-space: nowrap;
+            overflow: visible;
+        }
+
+        /* 四人木片：內容較多，整體等比例縮小以維持在框框內 */
+        .inner-tablet.inner-tablet-quad {
+            gap: 4px;
+            padding: 18px 6px;
+        }
+        .inner-tablet.inner-tablet-quad .inner-person-col {
+            max-width: 90px;
+            padding-left: 2px;
+            padding-right: 2px;
+        }
+        .inner-tablet.inner-tablet-quad .inner-side {
+            font-size: 0.68rem;
+            padding-top: 18px;
+            line-height: 1.2;
+        }
+        .inner-tablet.inner-tablet-quad .inner-main {
+            font-size: 0.96rem;
+            line-height: 1.2;
+        }
+
+        /* 總覽預覽區 CSS Grid 排版：卡片以實際牌位視覺尺寸顯示，不再縮小 */
+        /* 欄數可由使用者透過下拉選單調整（--overview-cols），預設4欄，排版寬扁，較貼近 A4 橫向列印比例 */
+        .overview-grid {
+            display: grid;
+            grid-template-columns: repeat(var(--overview-cols, 4), 260px);
+            gap: 24px;
+            justify-items: center;
+            align-items: start;
+            justify-content: center;
+            width: max-content;
+            max-width: none;
+            margin: 10px auto 0 auto;
+        }
+
+        /* 總覽分頁：允許內容寬度超出面板，並可橫向捲動預覽（不影響下載圖片完整度） */
+        #tab-overview.preview-content {
+            overflow-x: auto;
+            justify-content: flex-start;
+        }
+        #overview-view-wrapper {
+            width: max-content;
+            min-width: 100%;
+            margin: 0 auto;
+            flex-shrink: 0;
+        }
+
+        .overview-item-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            width: auto;
+            height: auto;
+            overflow: visible;
+            position: relative;
+        }
+
+        .overview-scale {
+            transform: none;
+            margin: 0 !important;
+            flex-shrink: 0;
+        }
+
+        /* 特殊文字排版優化 */
+        .char-aside {
+            display: inline-block;
+            font-size: 0.67em;
+            transform: translateX(0.5em);
+        }
+.info-panel{font-size:1rem}
+
+@media (max-width:1000px){
+.layout{grid-template-columns:1fr}
+.stage{position:static}
+.stage-body{max-height:none}
+.show-preview{display:inline-flex}
+.panel{padding:20px}
+}
+@media (max-width:600px){
+.stepper .t{display:none}
+.stepper .on .t{display:inline}
+.stepper li{flex:none}.stepper li:has(.on){flex:1}
+.stepper button{padding:6px 10px}
+.nav .btn{padding:0 12px}
+}
+@media (max-width:900px){
+            .outer-tablet {
+                width: 220px;
+                height: 400px;
+                padding: 25px 10px 30px 10px;
+                border-width: 6px;
+            }
+            .col-right,
+            .col-left,
+            .col-middle {
+                font-size: 1.3rem;
+            }
+            .tanghao {
+                font-size: 1.3rem;
+            }
+            .inner-tablet {
+                width: 200px;
+                min-height: 260px;
+                padding: 20px 6px;
+            }
+            .inner-main {
+                font-size: 1rem;
+            }
+            .inner-side {
+                font-size: 0.7rem;
+            }
+            .inner-person-col {
+                max-width: 90px;
+            }
+            .inner-tablet.inner-tablet-quad {
+                gap: 3px;
+                padding: 14px 4px;
+            }
+            .inner-tablet.inner-tablet-quad .inner-person-col {
+                max-width: 68px;
+                padding-left: 1px;
+                padding-right: 1px;
+            }
+            .inner-tablet.inner-tablet-quad .inner-main {
+                font-size: 0.8rem;
+                line-height: 1.15;
+            }
+            .overview-grid {
+                grid-template-columns: repeat(var(--overview-cols, 4), 220px);
+                gap: 16px;
+            }
+            .inner-tablet.inner-tablet-quad .inner-side {
+                font-size: 0.58rem;
+                padding-top: 14px;
+                line-height: 1.15;
+            }
+            .info-panel {
+                padding: 12px 15px;
+                font-size: 0.88rem;
+            }
+}
+</style>
+</head>
+<body>
+<div class="app">
+<header class="top">
+  <h1>神主牌位助手</h1>
+  <div class="top-actions">
+    <label class="btn">開啟舊檔<input type="file" id="uploadExcel" class="sr-file" accept=".xlsx"></label>
+    <button class="btn" onclick="clearLocalStorage()">重新開始</button>
+  </div>
+</header>
+
+<ol class="stepper" id="stepper" aria-label="製作步驟"></ol>
+
+<div class="layout">
+<main class="panel settings-panel">
+
+  <section id="step-basic">
+    <h2>基本資料</h2>
+    <p class="lead">先填這張牌位的基本資訊，之後隨時可以回來修改。</p>
+    <div class="lbl">要製作哪些牌位？</div>
+    <div class="choices" data-for="displayMode"></div>
+    <select id="displayMode" hidden onchange="toggleDisplayMode()">
+      <option value="both">外牌 + 內牌</option>
+      <option value="innerOnly">僅內牌</option>
+    </select>
+    <div class="field">
+      <label for="tabletId">牌位編號 <span class="req">必填</span></label>
+      <input type="text" id="tabletId" placeholder="例如 1F-01-23">
+    </div>
+    <div class="field">
+      <label for="entryDate">入牌日期</label>
+      <input type="text" id="entryDate" placeholder="例如 115.5.30">
+      <div class="hint">民國年.月.日</div>
+    </div>
+    <div class="field">
+      <label for="staffName">服務人員／申請人</label>
+      <input type="text" id="staffName" placeholder="請輸入姓名">
+    </div>
+    <div class="field">
+      <label for="tabletNotes">備註（選填）</label>
+      <textarea id="tabletNotes" placeholder="例如奉祀地點、特殊注意事項"></textarea>
+    </div>
+  </section>
+
+  <section id="outer-settings-section" hidden>
+    <h2>外牌</h2>
+    <p class="lead">選擇牌位種類，填入姓名，文字會自動排好。</p>
+    <div class="lbl">這是哪一種牌位？</div>
+    <div class="choices" data-for="outerType"></div>
+    <select id="outerType" hidden>
+      <option value="ancestor">歷代祖先牌位</option>
+      <option value="male">個人牌位(男)</option>
+      <option value="female">個人牌位(女)</option>
+      <option value="custom">自定義內容</option>
+    </select>
+    <div class="row">
+      <div class="field field-surname"><label id="lbl-surname" for="surname">姓氏</label><input type="text" id="surname" value="Ｏ"></div>
+      <div class="field field-maiden" style="display:none"><label for="maidenName">本家姓</label><input type="text" id="maidenName" value="Ｏ"></div>
+      <div class="field field-given" style="display:none"><label for="givenName">名字</label><input type="text" id="givenName" value="〇〇"></div>
+    </div>
+    <details>
+      <summary>調整外牌文字（通常不用修改）</summary>
+      <p class="tip">字數旁的小標籤是「生老病死苦」字數判定：綠色為吉、紅色建議調整，僅供參考，不影響下載。</p>
+      <div class="field"><label for="tanghao">上方橫排字（堂號）<span class="fortune-tag" id="ft-tanghao"></span></label><input type="text" id="tanghao" value="佛 恩"></div>
+      <div class="field"><label for="outerMiddle">中間主文<span class="fortune-tag" id="ft-outermiddle"></span></label><input type="text" id="outerMiddle" value="堂上Ｏ姓歷代祖考妣之神位"></div>
+      <div class="field"><label for="worship">右側（奉祀人）<span class="fortune-tag" id="ft-worship"></span></label><input type="text" id="worship" value="陽上子孫奉祀"></div>
+      <div class="field"><label for="year">左側（歲次）<span class="fortune-tag" id="ft-year"></span></label><input type="text" id="year" value="歲次丙午年立"></div>
+    </details>
+  </section>
+
+  <section id="step-inner" hidden>
+    <h2>內牌</h2>
+    <p class="lead">每片木片可放 1～4 位，需要更多就新增一片。</p>
+    <p class="tip">字數旁的小標籤是「生老病死苦」字數判定：綠色為吉、紅色建議調整，僅供參考，不影響下載。</p>
+    <div id="inner-sheets-container"></div>
+    <button type="button" class="btn big" onclick="addInnerSheet()">＋ 新增一片內牌</button>
+  </section>
+
+  <section id="step-finish" hidden>
+    <h2>預覽與下載</h2>
+    <p class="lead">先確認右側預覽沒問題，再選擇要下載的內容。</p>
+    <div class="dl-grid">
+      <button type="button" class="btn big primary" id="dl-outer" onclick="dlImage('tab-outer')">下載外牌圖片</button>
+      <button type="button" class="btn big primary" onclick="dlImage('tab-inner')">下載內牌圖片</button>
+      <button type="button" class="btn big" onclick="dlImage('tab-overview')">下載全部一覽圖</button>
+    </div>
+    <div class="lbl">保存資料</div>
+    <button type="button" class="btn big" onclick="saveAsExcel()">存成 Excel 檔</button>
+    <p class="hint" style="margin-bottom:18px">之後按右上角「開啟舊檔」就能讀回來繼續修改。</p>
+    <details>
+      <summary>其他格式與文字內容</summary>
+      <textarea id="text-output" readonly></textarea>
+      <div class="row" style="margin-top:10px">
+        <button type="button" class="btn" onclick="saveAsTxt()">存成 .txt</button>
+        <button type="button" class="btn" onclick="saveAsWord()">存成 Word</button>
+        <button type="button" class="btn" onclick="copyText()">複製全文</button>
+      </div>
+    </details>
+  </section>
+
+  <div class="nav">
+    <button type="button" class="btn" id="btnPrev" onclick="stepMove(-1)">上一步</button>
+    <button type="button" class="btn show-preview" onclick="document.querySelector('.stage').scrollIntoView({behavior:'smooth'})">看預覽</button>
+    <button type="button" class="btn primary" id="btnNext" onclick="stepMove(1)">下一步</button>
+  </div>
+</main>
+
+<section class="stage" aria-label="牌位預覽">
+  <div class="stage-bar" role="tablist">
+    <button class="tab-btn active" id="btn-tab-outer" data-tab="tab-outer" role="tab" onclick="switchTab('tab-outer')">外牌</button>
+    <button class="tab-btn" id="btn-tab-inner" data-tab="tab-inner" role="tab" onclick="switchTab('tab-inner')">內牌</button>
+    <button class="tab-btn" id="btn-tab-overview" data-tab="tab-overview" role="tab" onclick="switchTab('tab-overview')">全部一覽</button>
+    <div id="overview-col-control">
+      <label for="overviewCols">每排</label>
+      <select id="overviewCols" onchange="updateOverviewColumns()">
+        <option value="1">1 張</option><option value="2" selected>2 張</option><option value="3">3 張</option><option value="4">4 張</option><option value="5">5 張</option><option value="6">6 張</option>
+      </select>
+    </div>
+  </div>
+  <div class="stage-body">
+    <div id="tab-outer" class="preview-content active">
+      <div class="tablet-view-wrapper" id="outer-view-wrapper">
+        <div class="info-panel" id="info-panel-outer"></div>
+        <div class="outer-tablet" id="outer-tablet-element">
+          <div class="tablet-body">
+            <div class="col-right" id="prev-worship"></div>
+            <div class="col-middle-wrapper">
+              <div class="tanghao" id="prev-tanghao"></div>
+              <div class="col-middle" id="prev-outermiddle"></div>
+            </div>
+            <div class="col-left" id="prev-year"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="tab-inner" class="preview-content">
+      <div class="tablet-view-wrapper" id="inner-view-wrapper">
+        <div class="info-panel" id="info-panel-inner"></div>
+        <div id="prev-inner-container"></div>
+      </div>
+    </div>
+    <div id="tab-overview" class="preview-content">
+      <div class="tablet-view-wrapper" id="overview-view-wrapper">
+        <div class="info-panel" id="info-panel-overview"></div>
+        <div class="overview-grid" id="prev-overview-container"></div>
+      </div>
+    </div>
+  </div>
+</section>
+</div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+const STORAGE_KEY = 'tablet_data_v2';
+
+let innerSheets = [{
+    type: 'single-male',
+    persons: [{
+        name: "陳文定",
+        surname: "陳",
+        maidenName: "",
+        givenName: "文定",
+        main: "顯考陳公諱文定官一位神主",
+        birth: "生於民國三十年二月十五日吉時受生",
+        death: "卒于民國一一二年八月十日吉時別逝"
+    }]
+}];
+
+let currentActiveTab = 'tab-outer';
+
+function saveToLocalStorage() {
+    const data = {
+        displayMode: document.getElementById('displayMode').value,
+        tabletId: document.getElementById('tabletId').value,
+        entryDate: document.getElementById('entryDate').value,
+        staffName: document.getElementById('staffName').value,
+        tabletNotes: document.getElementById('tabletNotes').value,
+        outerType: document.getElementById('outerType').value,
+        surname: document.getElementById('surname').value,
+        maidenName: document.getElementById('maidenName').value,
+        givenName: document.getElementById('givenName').value,
+        tanghao: document.getElementById('tanghao').value,
+        outerMiddle: document.getElementById('outerMiddle').value,
+        worship: document.getElementById('worship').value,
+        year: document.getElementById('year').value,
+        innerSheets: innerSheets
+    };
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch (e) {}
+}
+
+function loadFromLocalStorage() {
+    const savedData = localStorage.getItem(STORAGE_KEY);
+    if (savedData) {
+        try {
+            const data = JSON.parse(savedData);
+            if (data.displayMode) document.getElementById('displayMode').value = data.displayMode;
+            if (data.tabletId) document.getElementById('tabletId').value = data.tabletId;
+            if (data.entryDate) document.getElementById('entryDate').value = data.entryDate;
+            if (data.staffName) document.getElementById('staffName').value = data.staffName;
+            if (data.tabletNotes) document.getElementById('tabletNotes').value = data.tabletNotes;
+            if (data.outerType) document.getElementById('outerType').value = data.outerType;
+            if (data.surname) document.getElementById('surname').value = data.surname;
+            if (data.maidenName) document.getElementById('maidenName').value = data.maidenName;
+            if (data.givenName) document.getElementById('givenName').value = data.givenName;
+            if (data.tanghao) document.getElementById('tanghao').value = data.tanghao;
+            if (data.outerMiddle) document.getElementById('outerMiddle').value = data.outerMiddle;
+            if (data.worship) document.getElementById('worship').value = data.worship;
+            if (data.year) document.getElementById('year').value = data.year;
+
+            if (data.innerSheets && Array.isArray(data.innerSheets)) {
+                innerSheets = data.innerSheets.map(sheet => {
+                    if (sheet.type === 'single') sheet.type = 'single-male';
+                    return sheet;
+                });
+            }
+        } catch (error) {
+            console.error("讀取暫存資料失敗:", error);
+        }
+    }
+}
+
+function clearLocalStorage() {
+    if (confirm("確定要重新開始嗎？目前填寫的內容會全部清除，無法復原。\n（若想保留，請先到「預覽與下載」存成 Excel。）")) {
+        localStorage.removeItem(STORAGE_KEY);
+        location.reload();
+    }
+}
+
+function toggleDisplayMode() {
+    const mode = document.getElementById('displayMode').value;
+    const outerSection = document.getElementById('outer-settings-section');
+    const outerTabBtn = document.getElementById('btn-tab-outer');
+
+    if (mode === 'innerOnly') {
+        outerSection.classList.add('mode-hidden');
+        outerTabBtn.classList.add('hidden');
+        if (currentActiveTab === 'tab-outer') {
+            switchTab('tab-inner', document.getElementById('btn-tab-inner'));
+        }
+    } else {
+        outerSection.classList.remove('mode-hidden');
+        outerTabBtn.classList.remove('hidden');
+    }
+    updateAll();
+}
+
+function getFortune(text) {
+    if (!text) return '';
+    const cleanStr = text.replace(/[\s\p{P}]/gu, '');
+    const len = cleanStr.length;
+    if (len === 0) return '';
+    const fortunes = ['苦', '生', '老', '病', '死'];
+    return `${len}字(${fortunes[len % 5]})`;
+}
+
+function updateFortuneLabel(elementId, text, targetFortunes) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    const fortuneStr = getFortune(text);
+    el.textContent = fortuneStr;
+    const isLucky = targetFortunes.some(t => fortuneStr.includes(t));
+    el.style.color = isLucky ? '#4CAF50' : '#d32f2f';
+}
+
+function updateOuterVisibility() {
+    const type = document.getElementById('outerType').value;
+    const maidenField = document.querySelector('.field-maiden');
+    const givenField = document.querySelector('.field-given');
+    const lblSurname = document.getElementById('lbl-surname');
+
+    if (type === 'ancestor') {
+        maidenField.style.display = 'none';
+        givenField.style.display = 'none';
+        lblSurname.textContent = '姓氏';
+    } else if (type === 'male') {
+        maidenField.style.display = 'none';
+        givenField.style.display = 'block';
+        lblSurname.textContent = '姓氏';
+    } else if (type === 'female') {
+        maidenField.style.display = 'block';
+        givenField.style.display = 'block';
+        lblSurname.textContent = '夫家姓 (無則留空)';
+    } else {
+        maidenField.style.display = 'none';
+        givenField.style.display = 'none';
+        lblSurname.textContent = '姓氏';
+    }
+}
+
+function updateOuterMiddleText() {
+    const type = document.getElementById('outerType').value;
+    if (type === 'custom') return;
+
+    const surname = document.getElementById('surname').value.trim();
+    const maidenName = document.getElementById('maidenName').value.trim() || 'Ｏ';
+    const givenName = document.getElementById('givenName').value.trim() || '〇〇';
+    const middleInput = document.getElementById('outerMiddle');
+
+    const safeSurname = surname || 'Ｏ';
+
+    if (type === 'ancestor') {
+        middleInput.value = `堂上${safeSurname}姓歷代祖考妣之神位`;
+    } else if (type === 'male') {
+        middleInput.value = `顯考${safeSurname}公諱${givenName}官一位神主`;
+    } else if (type === 'female') {
+        const husbandStr = surname ? `${surname}門` : '';
+        middleInput.value = `顯妣${husbandStr}${maidenName}氏${givenName}娘之神主`;
+    }
+}
+
+function handleOuterInputChange() {
+    updateOuterMiddleText();
+    const outerType = document.getElementById('outerType').value;
+    if (innerSheets.length > 0) {
+        const firstSheet = innerSheets[0];
+        const p = firstSheet.persons[0];
+        if (outerType === 'male' && firstSheet.type === 'single-male') {
+            p.surname = document.getElementById('surname').value;
+            p.givenName = document.getElementById('givenName').value;
+            updateInnerMainText(0, 0);
+            const snInput = document.getElementById(`inner-surname-0-0`);
+            if (snInput) snInput.value = p.surname;
+            const gnInput = document.getElementById(`inner-given-0-0`);
+            if (gnInput) gnInput.value = p.givenName;
+            const mainInput = document.getElementById(`inner-main-0-0`);
+            if (mainInput) mainInput.value = p.main;
+        } else if (outerType === 'female' && firstSheet.type === 'single-female') {
+            p.surname = document.getElementById('surname').value;
+            p.maidenName = document.getElementById('maidenName').value;
+            p.givenName = document.getElementById('givenName').value;
+            updateInnerMainText(0, 0);
+            const snInput = document.getElementById(`inner-surname-0-0`);
+            if (snInput) snInput.value = p.surname;
+            const mnInput = document.getElementById(`inner-maiden-0-0`);
+            if (mnInput) mnInput.value = p.maidenName;
+            const gnInput = document.getElementById(`inner-given-0-0`);
+            if (gnInput) gnInput.value = p.givenName;
+            const mainInput = document.getElementById(`inner-main-0-0`);
+            if (mainInput) mainInput.value = p.main;
+        }
+    }
+    updateAll();
+}
+
+function handleOuterTypeChange() {
+    updateOuterVisibility();
+    updateOuterMiddleText();
+    const outerType = document.getElementById('outerType').value;
+    if (innerSheets.length > 0) {
+        const p = innerSheets[0].persons[0];
+        if (outerType === 'male') {
+            innerSheets[0].type = 'single-male';
+            innerSheets[0].persons = innerSheets[0].persons.slice(0, 1);
+            p.surname = document.getElementById('surname').value;
+            p.givenName = document.getElementById('givenName').value;
+            updateInnerMainText(0, 0);
+        } else if (outerType === 'female') {
+            innerSheets[0].type = 'single-female';
+            innerSheets[0].persons = innerSheets[0].persons.slice(0, 1);
+            p.surname = document.getElementById('surname').value;
+            p.maidenName = document.getElementById('maidenName').value;
+            p.givenName = document.getElementById('givenName').value;
+            updateInnerMainText(0, 0);
+        }
+    }
+    renderInnerSheets();
+    updateAll();
+}
+
+function addInnerSheet() {
+    innerSheets.push({
+        type: 'single-male',
+        persons: [{ name: "", surname: "", maidenName: "", givenName: "", main: "", birth: "生於", death: "卒于" }]
+    });
+    renderInnerSheets();
+    updateAll();
+}
+
+function deleteSheet(idx) {
+    if (innerSheets.length <= 1) return alert("至少需保留一片內牌。");
+    if (!confirm("確定要刪除這片內牌嗎？")) return;
+    innerSheets.splice(idx, 1);
+    renderInnerSheets();
+    updateAll();
+}
+
+function changeSheetType(idx, type) {
+    const count = (type === 'single-male' || type === 'single-female') ? 1 : (type === 'couple' ? 2 : (type === 'quad' ? 4 : 3));
+    const newPersons = [];
+    for (let i = 0; i < count; i++) {
+        newPersons.push(innerSheets[idx].persons[i] || { name: "", surname: "", maidenName: "",
+            givenName: "", main: "", birth: "生於", death: "卒于" });
+    }
+    innerSheets[idx].type = type;
+    innerSheets[idx].persons = newPersons;
+
+    if (idx === 0) {
+        const outerType = document.getElementById('outerType').value;
+        if (type === 'single-male' && outerType === 'male') {
+            innerSheets[idx].persons[0].surname = document.getElementById('surname').value;
+            innerSheets[idx].persons[0].givenName = document.getElementById('givenName').value;
+            updateInnerMainText(idx, 0);
+        } else if (type === 'single-female' && outerType === 'female') {
+            innerSheets[idx].persons[0].surname = document.getElementById('surname').value;
+            innerSheets[idx].persons[0].maidenName = document.getElementById('maidenName').value;
+            innerSheets[idx].persons[0].givenName = document.getElementById('givenName').value;
+            updateInnerMainText(idx, 0);
+        }
+    }
+
+    if (type === 'couple') {
+        updateInnerMainText(idx, 0);
+        updateInnerMainText(idx, 1);
+    }
+
+    renderInnerSheets();
+    updateAll();
+}
+
+function updateInnerMainText(sIdx, pIdx) {
+    const sheet = innerSheets[sIdx];
+    const p = sheet.persons[pIdx];
+
+    if (sheet.type === 'single-male' || (sheet.type === 'couple' && pIdx === 0)) {
+        const safeSurname = p.surname ? p.surname.trim() : 'Ｏ';
+        const safeGiven = p.givenName ? p.givenName.trim() : '〇〇';
+        p.main = `顯考${safeSurname}公諱${safeGiven}官一位神主`;
+        p.name = `${safeSurname}${safeGiven}`;
+    } else if (sheet.type === 'single-female' || (sheet.type === 'couple' && pIdx === 1)) {
+        const safeSurname = p.surname ? p.surname.trim() : '';
+        const safeMaiden = p.maidenName ? p.maidenName.trim() : 'Ｏ';
+        const safeGiven = p.givenName ? p.givenName.trim() : '〇〇';
+        const husbandStr = safeSurname ? `${safeSurname}門` : '';
+        p.main = `顯妣${husbandStr}${safeMaiden}氏${safeGiven}娘之神主`;
+        p.name = `${safeSurname}${safeMaiden}${safeGiven}`;
+    }
+}
+
+function syncInnerData(sheetIdx, personIdx, field, val) {
+    const p = innerSheets[sheetIdx].persons[personIdx];
+    p[field] = val;
+
+    if (field === 'surname' || field === 'maidenName' || field === 'givenName') {
+        updateInnerMainText(sheetIdx, personIdx);
+        const mainInput = document.getElementById(`inner-main-${sheetIdx}-${personIdx}`);
+        if (mainInput) mainInput.value = p.main;
+    }
+    updateAll();
+}
+
+function formatTabletText(text) {
+    if (!text) return "";
+    return text.replace(/氏/g, '<span class="char-aside">氏</span>')
+        .replace(/諱/g, '<span class="char-aside">諱</span>');
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+function renderInfoPanel() {
+    const mode = document.getElementById('displayMode').value;
+    const tabletId = document.getElementById('tabletId').value.trim();
+    const entryDate = document.getElementById('entryDate').value.trim();
+    const staffName = document.getElementById('staffName').value.trim();
+    const notes = document.getElementById('tabletNotes').value.trim();
+    const outerCount = mode === 'both' ? 1 : 0;
+    const innerCount = innerSheets.length;
+
+    let rows = '';
+    if (tabletId) {
+        rows += `<div class="info-item"><span class="info-label">牌位編號：</span><span class="info-value">${escapeHtml(tabletId)}</span></div>`;
+    }
+    if (entryDate) {
+        rows += `<div class="info-item"><span class="info-label">入牌日期：</span><span class="info-value">${escapeHtml(entryDate)}</span></div>`;
+    }
+    if (staffName) {
+        rows += `<div class="info-item"><span class="info-label">服務人員/申請人：</span><span class="info-value">${escapeHtml(staffName)}</span></div>`;
+    }
+    rows += `<div class="info-item"><span class="info-label">張數小計：</span><span class="info-value">外牌 ${outerCount} 張・內牌 ${innerCount} 張</span></div>`;
+    if (notes) {
+        rows += `<div class="info-item full"><span class="info-label">備註事項：</span><span class="info-value">${escapeHtml(notes)}</span></div>`;
+    }
+
+    const html = rows;
+
+    const outerPanel = document.getElementById('info-panel-outer');
+    const innerPanel = document.getElementById('info-panel-inner');
+    const overviewPanel = document.getElementById('info-panel-overview');
+    if (outerPanel) outerPanel.innerHTML = html;
+    if (innerPanel) innerPanel.innerHTML = html;
+    if (overviewPanel) overviewPanel.innerHTML = html;
+}
+
+function renderOverview() {
+    const overviewContainer = document.getElementById('prev-overview-container');
+    if (!overviewContainer) return;
+    overviewContainer.innerHTML = '';
+
+    const colSelect = document.getElementById('overviewCols');
+    if (colSelect) {
+        overviewContainer.style.setProperty('--overview-cols', colSelect.value);
+    }
+
+    const mode = document.getElementById('displayMode').value;
+
+    if (mode === 'both') {
+        const outerOrig = document.getElementById('outer-tablet-element');
+        if (outerOrig) {
+            const outerClone = outerOrig.cloneNode(true);
+            outerClone.removeAttribute('id');
+            outerClone.classList.add('overview-scale', 'overview-outer-clone');
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'overview-item-wrapper';
+            wrapper.appendChild(outerClone);
+            overviewContainer.appendChild(wrapper);
+        }
+    }
+
+    const innerOrigContainer = document.getElementById('prev-inner-container');
+    if (innerOrigContainer) {
+        Array.from(innerOrigContainer.children).forEach((child, idx) => {
+            const innerClone = child.cloneNode(true);
+            innerClone.removeAttribute('id');
+            innerClone.classList.add('overview-scale');
+            if (idx === 0) innerClone.classList.add('overview-inner-reference');
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'overview-item-wrapper';
+            wrapper.appendChild(innerClone);
+            overviewContainer.appendChild(wrapper);
+        });
+    }
+
+    syncOverviewOuterScale();
+}
+
+// 讓總覽中的外牌，等比例縮放至與內牌相同高度，版面更整齊
+function syncOverviewOuterScale() {
+    const overviewTab = document.getElementById('tab-overview');
+    if (!overviewTab || !overviewTab.classList.contains('active')) return;
+
+    const outerEl = document.querySelector('#prev-overview-container .overview-outer-clone');
+    const innerEl = document.querySelector('#prev-overview-container .overview-inner-reference');
+    if (!outerEl || !innerEl) return;
+
+    const outerWrapper = outerEl.parentElement;
+
+    // 重置，先量測未縮放前的自然尺寸
+    outerEl.style.transform = 'none';
+    outerWrapper.style.width = '';
+    outerWrapper.style.height = '';
+    outerWrapper.style.overflow = '';
+    outerWrapper.style.justifyContent = '';
+    outerWrapper.style.alignItems = '';
+
+    const outerNaturalWidth = outerEl.offsetWidth;
+    const outerNaturalHeight = outerEl.offsetHeight;
+    const innerHeight = innerEl.offsetHeight;
+
+    if (outerNaturalHeight > 0 && innerHeight > 0) {
+        const scale = innerHeight / outerNaturalHeight;
+        const scaledWidth = outerNaturalWidth * scale;
+        const scaledHeight = outerNaturalHeight * scale;
+
+        outerEl.style.transformOrigin = 'top left';
+        outerEl.style.transform = `scale(${scale})`;
+
+        // 同步縮小外層容器的版面佔位，避免格線列高仍以縮放前的高度計算
+        outerWrapper.style.width = scaledWidth + 'px';
+        outerWrapper.style.height = scaledHeight + 'px';
+        outerWrapper.style.overflow = 'hidden';
+        // 容器改為靠左上對齊，跟縮放基準點一致，避免內容置中造成兩側被裁切
+        outerWrapper.style.justifyContent = 'flex-start';
+        outerWrapper.style.alignItems = 'flex-start';
+    }
+}
+
+function updateAll() {
+    const mode = document.getElementById('displayMode').value;
+    const tabletId = document.getElementById('tabletId').value;
+    const entryDate = document.getElementById('entryDate').value;
+    const staffName = document.getElementById('staffName').value;
+    const notes = document.getElementById('tabletNotes').value;
+
+    renderInfoPanel();
+
+    const outerCountText = mode === 'both' ? 1 : 0;
+    const innerCountText = innerSheets.length;
+
+    let fullText =
+        `牌位編號：${tabletId}\n入牌日期：${entryDate}\n服務人員：${staffName}\n張數小計：外牌 ${outerCountText} 張・內牌 ${innerCountText} 張\n備註事項：${notes}\n`;
+
+    if (mode === 'both') {
+        const tanghaoOrig = document.getElementById('tanghao').value;
+        const tanghaoReversed = tanghaoOrig.split('').reverse().join('');
+        const year = document.getElementById('year').value;
+        const outerMiddle = document.getElementById('outerMiddle').value;
+        const worship = document.getElementById('worship').value;
+
+        updateFortuneLabel('ft-tanghao', tanghaoOrig, ['老']);
+        updateFortuneLabel('ft-year', year, ['生']);
+        updateFortuneLabel('ft-outermiddle', outerMiddle, ['老']);
+        updateFortuneLabel('ft-worship', worship, ['生']);
+
+        document.getElementById('prev-tanghao').innerHTML = tanghaoReversed.split('').map(ch => `<span>${ch}</span>`).join('');
+        document.getElementById('prev-year').innerHTML = formatTabletText(year);
+        document.getElementById('prev-outermiddle').innerHTML = formatTabletText(outerMiddle);
+        document.getElementById('prev-worship').innerHTML = formatTabletText(worship);
+
+        fullText += `\n【外牌】\n堂號：${tanghaoOrig}\n${year}\n${outerMiddle}\n${worship}\n`;
+    }
+
+    const innerPrevContainer = document.getElementById('prev-inner-container');
+    innerPrevContainer.innerHTML = '';
+
+    const typeMap = {
+        'single-male': '單人(男)',
+        'single-female': '單人(女)',
+        'couple': '二人',
+        'trio': '三人',
+        'quad': '四人'
+    };
+
+    innerSheets.forEach((sheet, sIdx) => {
+        const sheetDiv = document.createElement('div');
+        sheetDiv.className = 'inner-tablet' + (sheet.type === 'quad' ? ' inner-tablet-quad' : '');
+
+        let sheetText =
+            `\n【內牌木片 ${sIdx + 1} - ${typeMap[sheet.type] || sheet.type}】\n`;
+
+        const cols = [];
+        sheet.persons.forEach((p, pIdx) => {
+            updateFortuneLabel(`ft-s${sIdx}-p${pIdx}-m`, p.main, ['老', '生']);
+            updateFortuneLabel(`ft-s${sIdx}-p${pIdx}-b`, p.birth, ['老', '生']);
+            updateFortuneLabel(`ft-s${sIdx}-p${pIdx}-d`, p.death, ['老', '生']);
+
+            const col = document.createElement('div');
+            col.className = 'inner-person-col';
+            col.innerHTML =
+                `<div class="inner-side">${p.death}</div><div class="inner-main">${formatTabletText(p.main)}</div><div class="inner-side">${p.birth}</div>`;
+            
+            cols.push(col);
+
+            sheetText +=
+                `成員${pIdx+1}(${p.name})：\n${p.birth}\n${p.main}\n${p.death}\n`;
+        });
+
+        if (sheet.type === 'couple' || sheet.type === 'trio' || sheet.type === 'quad') {
+            cols.reverse();
+        }
+
+        cols.forEach(col => sheetDiv.appendChild(col));
+
+        innerPrevContainer.appendChild(sheetDiv);
+        fullText += sheetText;
+    });
+
+    renderOverview();
+
+    document.getElementById('text-output').value = fullText;
+    refreshChoices();
+    saveToLocalStorage();
+}
+
+function updateOverviewColumns() {
+    const select = document.getElementById('overviewCols');
+    const grid = document.getElementById('prev-overview-container');
+    if (!select || !grid) return;
+    grid.style.setProperty('--overview-cols', select.value);
+}
+
+function copyText() {
+    const area = document.getElementById('text-output');
+    area.select();
+    document.execCommand('copy');
+    toast("已複製全文");
+}
+
+// ========== 圖片下載功能 ==========
+
+async function downloadCurrentPreview() {
+    const tabletId = document.getElementById('tabletId').value || '未命名';
+    const entryDate = document.getElementById('entryDate').value || '無日期';
+    const baseFilename = `${tabletId}_${entryDate}`;
+
+    if (currentActiveTab === 'tab-outer') {
+        await downloadElementImage(
+            document.getElementById('outer-view-wrapper'),
+            `外牌_${baseFilename}.png`,
+            '#ffffff'
+        );
+    } else if (currentActiveTab === 'tab-inner') {
+        const innerContainer = document.getElementById('prev-inner-container');
+        if (!innerContainer || innerContainer.children.length === 0) {
+            alert('目前沒有內牌木片可供下載。');
+            return;
+        }
+        await downloadElementImage(
+            document.getElementById('inner-view-wrapper'),
+            `內牌_${baseFilename}.png`,
+            '#ffffff'
+        );
+    } else if (currentActiveTab === 'tab-overview') {
+        await downloadElementImage(
+            document.getElementById('overview-view-wrapper'),
+            `總覽_${baseFilename}.png`,
+            '#ffffff'
+        );
+    } else if (currentActiveTab === 'tab-text') {
+        alert('請切換至視覺或總覽預覽標籤，再下載圖片。');
+    }
+}
+
+async function downloadElementImage(element, filename, backgroundColor) {
+    if (!element) {
+        alert('找不到要下載的預覽元素，請重新整理頁面。');
+        return;
+    }
+
+    const downloadBtn = document.querySelector('.btn-download-img');
+    const originalText = downloadBtn ? downloadBtn.textContent : '';
+    if (downloadBtn) {
+        downloadBtn.textContent = '⏳ 處理中...';
+        downloadBtn.disabled = true;
+    }
+
+    try {
+        const fullWidth = Math.max(element.scrollWidth, element.offsetWidth);
+        const fullHeight = Math.max(element.scrollHeight, element.offsetHeight);
+
+        const options = {
+            pixelRatio: 2,
+            backgroundColor: backgroundColor,
+            cacheBust: true,
+            width: fullWidth,
+            height: fullHeight,
+            style: {
+                width: fullWidth + 'px',
+                height: fullHeight + 'px'
+            }
+        };
+
+        const dataUrl = await htmlToImage.toPng(element, options);
+
+        const link = document.createElement('a');
+        link.download = filename;
+        link.href = dataUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+    } catch (error) {
+        console.error('下載圖片失敗:', error);
+        alert('下載圖片時發生錯誤，請稍後再試。\n\n若問題持續，請嘗試：\n1. 重新整理頁面\n2. 使用 Chrome 或 Edge 瀏覽器\n3. 檢查瀏覽器是否封鎖了下載視窗');
+    } finally {
+        if (downloadBtn) {
+            downloadBtn.textContent = originalText || '📷 下載圖片';
+            downloadBtn.disabled = false;
+        }
+    }
+}
+
+// ========== Excel 匯入匯出 ==========
+
+function handleExcelUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+        const data = evt.target.result;
+        const workbook = XLSX.read(data, { type: 'binary' });
+        const sheetName = workbook.SheetNames[0];
+        const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1 });
+
+        try {
+            document.getElementById('tabletId').value = rows[1][1] || "";
+            document.getElementById('entryDate').value = rows[2][1] || "";
+            document.getElementById('staffName').value = rows[3][1] || "";
+            document.getElementById('tabletNotes').value = rows[4][1] || "";
+
+            innerSheets = [];
+
+            for (let i = 0; i < rows.length; i++) {
+                const firstCell = String(rows[i][0] || "");
+
+                if (firstCell.includes("【外牌部分】")) {
+                    document.getElementById('displayMode').value = "both";
+                    document.getElementById('tanghao').value = rows[i + 2][1] || "";
+                    document.getElementById('year').value = rows[i + 3][1] || "";
+                    document.getElementById('outerMiddle').value = rows[i + 4][1] || "";
+                    document.getElementById('worship').value = rows[i + 5][1] || "";
+                }
+
+                if (firstCell.includes("木片")) {
+                    const typeMatch = firstCell.match(/\((.*?)\)/);
+                    const typeStr = typeMatch ? typeMatch[1] : "single-male";
+
+                    let type = 'single-male';
+                    if (typeStr.includes('女') || typeStr === 'single-female') type =
+                        'single-female';
+                    else if (typeStr.includes('男') || typeStr === 'single-male' || typeStr ===
+                        'single') type = 'single-male';
+                    else if (typeStr.includes('夫妻') || typeStr === 'couple') type = 'couple';
+                    else if (typeStr.includes('四人') || typeStr === 'quad') type = 'quad';
+                    else if (typeStr.includes('三人') || typeStr === 'trio') type = 'trio';
+
+                    const personCount = (type === 'single-male' || type === 'single-female' ? 1 : (
+                        type === 'couple' ? 2 : (type === 'quad' ? 4 : 3)));
+
+                    let persons = [];
+                    for (let j = 1; j <= personCount; j++) {
+                        const pRow = rows[i + 1 + j];
+                        if (pRow) {
+                            persons.push({
+                                name: pRow[1] || "",
+                                surname: "",
+                                maidenName: "",
+                                givenName: "",
+                                birth: (pRow[2] || "").split(' [')[0],
+                                main: (pRow[3] || "").split(' [')[0],
+                                death: (pRow[4] || "").split(' [')[0]
+                            });
+                        }
+                    }
+                    innerSheets.push({ type, persons });
+                }
+            }
+
+            if (innerSheets.length === 0) {
+                innerSheets = [{ type: 'single-male', persons: [{ name: "", surname: "",
+                        maidenName: "", givenName: "", main: "", birth: "生於", death: "卒于" }] }];
+            }
+
+            toast("資料讀取成功");
+            toggleDisplayMode();
+            updateOuterVisibility();
+            renderInnerSheets();
+            updateAll();
+            goStep('step-basic');
+        } catch (err) {
+            console.error(err);
+            alert("檔案格式不符，請確保上傳的是由本工具導出的 Excel 檔案。");
+        }
+    };
+    reader.readAsBinaryString(file);
+}
+
+function saveAsTxt() {
+    const text = document.getElementById('text-output').value;
+    const tabletId = document.getElementById('tabletId').value || "未命名牌位";
+    const entryDate = document.getElementById('entryDate').value || "無日期";
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.download = `${tabletId}_${entryDate}.txt`;
+    link.href = url;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
+
+function saveAsWord() {
+    const text = document.getElementById('text-output').value;
+    const tabletId = document.getElementById('tabletId').value || "未命名";
+    const entryDate = document.getElementById('entryDate').value || "無日期";
+    const formattedText = text.replace(/\n/g, '<br>');
+    const content = `
+        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+        <head><meta charset='utf-8'><title>Export Word</title></head>
+        <body style="font-family: 'MS Ungothic', '標楷體';">
+            <h2>神主牌位排字資料</h2>
+            <div style="font-size: 12pt; line-height: 1.5;">
+                ${formattedText}
+            </div>
+        </body>
+        </html>
+    `;
+    const blob = new Blob(['\ufeff', content], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${tabletId}_${entryDate}.doc`;
+    link.click();
+    URL.revokeObjectURL(url);
+}
+
+function saveAsExcel() {
+    const tabletId = document.getElementById('tabletId').value || "未命名";
+    const entryDate = document.getElementById('entryDate').value || "無日期";
+    const staffName = document.getElementById('staffName').value || "";
+    const notes = document.getElementById('tabletNotes').value || "";
+    let data = [
+        ["牌位資訊管理表"],
+        ["牌位編號", tabletId],
+        ["入牌日期", entryDate],
+        ["服務人員", staffName],
+        ["備註事項", notes],
+        []
+    ];
+
+    if (document.getElementById('displayMode').value === 'both') {
+        data.push(["【外牌部分】"]);
+        data.push(["位置", "內容", "吉凶判定"]);
+        data.push(["堂號", document.getElementById('tanghao').value, getFortune(document.getElementById(
+            'tanghao').value)]);
+        data.push(["歲次", document.getElementById('year').value, getFortune(document.getElementById('year')
+            .value)]);
+        data.push(["主文", document.getElementById('outerMiddle').value, getFortune(document.getElementById(
+            'outerMiddle').value)]);
+        data.push(["奉祀人", document.getElementById('worship').value, getFortune(document.getElementById(
+            'worship').value)]);
+        data.push([]);
+    }
+
+    const typeMap = {
+        'single-male': '單人(男)',
+        'single-female': '單人(女)',
+        'couple': '夫妻',
+        'trio': '三人',
+        'quad': '四人'
+    };
+
+    data.push(["【內牌木片資料】"]);
+    innerSheets.forEach((sheet, sIdx) => {
+        data.push([`木片 ${sIdx + 1} (${typeMap[sheet.type] || sheet.type})`]);
+        data.push(["成員", "姓名", "生日", "主文", "忌日"]);
+        sheet.persons.forEach((p, pIdx) => {
+            data.push([`成員 ${pIdx + 1}`, p.name, `${p.birth} [${getFortune(p.birth)}]`,
+                `${p.main} [${getFortune(p.main)}]`, `${p.death} [${getFortune(p.death)}]`
+            ]);
+        });
+        data.push([]);
+    });
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    XLSX.utils.book_append_sheet(wb, ws, "牌位排字資料");
+    XLSX.writeFile(wb, `${tabletId}_${entryDate}.xlsx`);
+}
+
+
+// ========== 新版介面：步驟流程 ==========
+const CHOICES = {
+    displayMode: [['both', '外牌＋內牌', '完整一組牌位'], ['innerOnly', '只做內牌', '只需要內側木片']],
+    outerType: [['ancestor', '歷代祖先', '堂上○姓歷代祖考妣'], ['male', '個人（男）', '顯考○公諱○○'],
+        ['female', '個人（女）', '顯妣○門○氏○○'], ['custom', '自己輸入', '手動填寫全部文字']]
+};
+const SHEET_TYPES = [['single-male', '單人男'], ['single-female', '單人女'], ['couple', '夫妻'], ['trio', '三人'], ['quad', '四人']];
+const STEPS = [
+    { id: 'step-basic', name: '基本資料', tab: () => $v('displayMode') === 'both' ? 'tab-outer' : 'tab-inner' },
+    { id: 'outer-settings-section', name: '外牌', tab: () => 'tab-outer', only: 'both' },
+    { id: 'step-inner', name: '內牌', tab: () => 'tab-inner' },
+    { id: 'step-finish', name: '預覽與下載', tab: () => 'tab-overview' }
+];
+let curStep = 'step-basic';
+const $v = id => document.getElementById(id).value;
+const visSteps = () => STEPS.filter(s => !s.only || s.only === $v('displayMode'));
+
+function pick(selectId, value) {
+    const el = document.getElementById(selectId);
+    el.value = value;
+    el.dispatchEvent(new Event('change'));
+}
+
+function goStep(id) {
+    curStep = id;
+    STEPS.forEach(s => { document.getElementById(s.id).hidden = s.id !== id; });
+    switchTab(STEPS.find(s => s.id === id).tab());
+    renderStepper();
+    if (window.innerWidth <= 1000) document.getElementById('stepper').scrollIntoView({ block: 'nearest' });
+}
+
+function stepMove(d) {
+    if (curStep === 'step-basic' && d > 0 && !$v('tabletId').trim()) {
+        toast('請先填寫牌位編號');
+        document.getElementById('tabletId').focus();
+        return;
+    }
+    const v = visSteps(), i = v.findIndex(s => s.id === curStep);
+    if (v[i + d]) goStep(v[i + d].id);
+}
+
+function renderStepper() {
+    const v = visSteps(), cur = v.findIndex(s => s.id === curStep);
+    if (cur < 0) return goStep(v[0].id);
+    const html = v.map((s, i) => `<li><button type="button" class="${i === cur ? 'on' : i < cur ? 'done' : ''}" ${i === cur ? 'aria-current="step"' : ''} onclick="goStep('${s.id}')"><span class="n">${i < cur ? '✓' : i + 1}</span><span class="t">${s.name}</span></button></li>`).join('');
+    const box = document.getElementById('stepper');
+    if (box.dataset.h !== html) { box.innerHTML = html; box.dataset.h = html; }
+    document.getElementById('btnPrev').style.visibility = cur === 0 ? 'hidden' : 'visible';
+    document.getElementById('btnNext').hidden = cur === v.length - 1;
+    document.getElementById('dl-outer').hidden = $v('displayMode') !== 'both';
+}
+
+function refreshChoices() {
+    document.querySelectorAll('.choices[data-for]').forEach(g => {
+        const v = $v(g.dataset.for);
+        g.querySelectorAll('.choice').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === v));
+    });
+    renderStepper();
+}
+
+let toastTimer;
+function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+function switchTab(tabId) {
+    if (tabId === 'tab-outer' && $v('displayMode') === 'innerOnly') tabId = 'tab-inner';
+    currentActiveTab = tabId;
+    document.querySelectorAll('.preview-content').forEach(c => c.classList.toggle('active', c.id === tabId));
+    document.querySelectorAll('.tab-btn').forEach(b => {
+        const on = b.dataset.tab === tabId;
+        b.classList.toggle('active', on);
+        b.setAttribute('aria-selected', on);
+    });
+    document.getElementById('overview-col-control').style.display = tabId === 'tab-overview' ? 'flex' : 'none';
+    if (tabId === 'tab-overview') syncOverviewOuterScale();
+}
+
+async function dlImage(tab) {
+    switchTab(tab);
+    await new Promise(r => requestAnimationFrame(() => setTimeout(r, 80)));
+    toast('正在製作圖片，請稍候…');
+    await downloadCurrentPreview();
+}
+
+// ========== 新版介面：內牌表單 ==========
+function renderInnerSheets() {
+    const field = (sIdx, pIdx, k, name, label, ph, val) =>
+        `<div class="field"><label for="inner-${k}-${sIdx}-${pIdx}">${label}</label><input type="text" id="inner-${k}-${sIdx}-${pIdx}" value="${escapeHtml(val || '')}" placeholder="${ph || ''}" oninput="syncInnerData(${sIdx}, ${pIdx}, '${name}', this.value)"></div>`;
+    const tag = (s, p, k) => `<span class="fortune-tag" id="ft-s${s}-p${p}-${k}"></span>`;
+
+    const html = innerSheets.map((sheet, sIdx) => {
+        const persons = sheet.persons.map((p, pIdx) => {
+            const male = sheet.type === 'single-male' || (sheet.type === 'couple' && pIdx === 0);
+            const female = sheet.type === 'single-female' || (sheet.type === 'couple' && pIdx === 1);
+            const title = sheet.persons.length > 1
+                ? `<h4>${sheet.type === 'couple' ? (pIdx === 0 ? '夫（男）' : '妻（女）') : `第 ${pIdx + 1} 位`}</h4>` : '';
+            const names = male
+                ? `<div class="row">${field(sIdx, pIdx, 'surname', 'surname', '姓氏', '', p.surname)}${field(sIdx, pIdx, 'given', 'givenName', '名字', '', p.givenName)}</div>`
+                : female
+                    ? `<div class="row">${field(sIdx, pIdx, 'surname', 'surname', '夫家姓', '無則留空', p.surname)}${field(sIdx, pIdx, 'maiden', 'maidenName', '本家姓', '', p.maidenName)}${field(sIdx, pIdx, 'given', 'givenName', '名字', '', p.givenName)}</div>`
+                    : field(sIdx, pIdx, 'name', 'name', '姓名', '', p.name);
+            return `<div class="person">${title}${names}
+                ${field(sIdx, pIdx, 'birth', 'birth', `出生（顯示在右側）${tag(sIdx, pIdx, 'b')}`, '', p.birth)}
+                ${field(sIdx, pIdx, 'death', 'death', `逝世（顯示在左側）${tag(sIdx, pIdx, 'd')}`, '', p.death)}
+                <details ${male || female ? '' : 'open'}><summary>牌位主文 ${tag(sIdx, pIdx, 'm')}</summary>
+                ${field(sIdx, pIdx, 'main', 'main', '中間文字', '', p.main)}</details></div>`;
+        }).join('');
+        const types = SHEET_TYPES.map(([v, t]) =>
+            `<button type="button" class="choice" aria-pressed="${sheet.type === v}" onclick="changeSheetType(${sIdx}, '${v}')"><b>${t}</b></button>`).join('');
+        return `<div class="sheet"><div class="sheet-head"><h3>第 ${sIdx + 1} 片內牌</h3>
+            <button type="button" class="btn small danger" onclick="deleteSheet(${sIdx})">刪除</button></div>
+            <div class="lbl">這片放幾位？</div><div class="choices small">${types}</div>${persons}</div>`;
+    }).join('');
+    document.getElementById('inner-sheets-container').innerHTML = html;
+}
+
+function init() {
+    for (const [sel, list] of Object.entries(CHOICES)) {
+        document.querySelector(`.choices[data-for="${sel}"]`).innerHTML = list.map(([v, t, d]) =>
+            `<button type="button" class="choice" data-v="${v}" onclick="pick('${sel}', '${v}')"><b>${t}</b><small>${d}</small></button>`).join('');
+    }
+    document.getElementById('outerType').addEventListener('change', handleOuterTypeChange);
+    ['surname', 'maidenName', 'givenName'].forEach(id => document.getElementById(id).addEventListener('input', handleOuterInputChange));
+    document.getElementById('uploadExcel').addEventListener('change', handleExcelUpload);
+    document.querySelectorAll('.settings-panel input:not(#surname):not(#maidenName):not(#givenName), .settings-panel select:not(#outerType), .settings-panel textarea').forEach(el => {
+        el.addEventListener('input', updateAll);
+        el.addEventListener('change', updateAll);
+    });
+    if (window.innerWidth < 700) document.getElementById('overviewCols').value = '1';
+    loadFromLocalStorage();
+    toggleDisplayMode();
+    updateOuterVisibility();
+    renderInnerSheets();
+    updateAll();
+    goStep('step-basic');
+}
+
+window.onload = init;
+
+</script>
+</body>
+</html>
