@@ -29,6 +29,11 @@ body{margin:0;background:var(--paper);color:var(--ink);font:18px/1.6 "Microsoft 
 .btn:disabled{opacity:.5;cursor:wait}
 .sr-file{position:absolute;width:1px;height:1px;opacity:0}
 .btn:has(.sr-file:focus-visible){outline:3px solid #1F6FEB;outline-offset:2px}
+.cases{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 14px}
+.case{min-height:44px;padding:0 18px;border:1.5px solid #B9BFB8;border-radius:99px;background:#fff;color:var(--ink);font-weight:600;font-size:1rem;cursor:pointer}
+.case[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}
+.case.add{border-style:dashed;color:var(--wood)}
+.case-tools{margin-left:auto;display:flex;gap:8px}
 .stepper{display:flex;gap:8px;list-style:none;margin:0 0 18px;padding:0}
 .stepper li{flex:1}
 .stepper button{width:100%;display:flex;align-items:center;gap:10px;min-height:52px;padding:6px 14px;border:1.5px solid var(--line);border-radius:12px;background:#fff;color:var(--mute);font-weight:600;font-size:1rem;cursor:pointer;text-align:left}
@@ -421,6 +426,8 @@ details>.field:first-of-type,details>input{margin-top:6px}
   </div>
 </header>
 
+<nav class="cases" id="cases" aria-label="案件（不同家庭，資料分開保存）"></nav>
+
 <ol class="stepper" id="stepper" aria-label="製作步驟"></ol>
 
 <div class="layout">
@@ -564,7 +571,17 @@ details>.field:first-of-type,details>input{margin-top:6px}
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
-const STORAGE_KEY = 'tablet_data_v2';
+// ========== 多案件（每個家庭一份資料，各自保存在瀏覽器）==========
+const META_KEY = 'tablet_cases_meta';
+const keyOf = id => id === 'main' ? 'tablet_data_v2' : 'tablet_case_' + id;
+function loadMeta() {
+    try { const m = JSON.parse(localStorage.getItem(META_KEY)); if (m && m.cases && m.cases.length) return m; } catch (e) {}
+    return { active: 'main', cases: [{ id: 'main', name: '' }] };
+}
+let meta = loadMeta();
+if (!meta.cases.some(c => c.id === meta.active)) meta.active = meta.cases[0].id;
+let STORAGE_KEY = keyOf(meta.active);
+
 
 let innerSheets = [{
     type: 'single-male',
@@ -633,7 +650,7 @@ function loadFromLocalStorage() {
 }
 
 function clearLocalStorage() {
-    if (confirm("確定要重新開始嗎？目前填寫的內容會全部清除，無法復原。\n（若想保留，請先到「預覽與下載」存成 Excel。）")) {
+    if (confirm("確定要清空「目前這個案件」嗎？其他案件不受影響，清除後無法復原。")) {
         localStorage.removeItem(STORAGE_KEY);
         location.reload();
     }
@@ -1417,6 +1434,7 @@ function refreshChoices() {
         g.querySelectorAll('.choice').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === v));
     });
     renderStepper();
+    renderCases();
 }
 
 let toastTimer;
@@ -1502,6 +1520,48 @@ function init() {
 }
 
 window.onload = init;
+
+// ========== 多案件操作 ==========
+function saveMeta() { try { localStorage.setItem(META_KEY, JSON.stringify(meta)); } catch (e) {} }
+function caseLabel(c, i) {
+    if (c.name) return c.name;
+    let id = '';
+    if (c.id === meta.active) id = $v('tabletId');
+    else { try { id = JSON.parse(localStorage.getItem(keyOf(c.id))).tabletId || ''; } catch (e) {} }
+    return id.trim() || `案件 ${i + 1}`;
+}
+function renderCases() {
+    const el = document.getElementById('cases');
+    const html = meta.cases.map((c, i) =>
+        `<button type="button" class="case" aria-pressed="${c.id === meta.active}" onclick="switchCase('${c.id}')">${escapeHtml(caseLabel(c, i))}</button>`).join('')
+        + `<button type="button" class="case add" onclick="addCase()">＋ 新增案件</button>`
+        + `<span class="case-tools"><button type="button" class="btn small" onclick="renameCase()">改名</button><button type="button" class="btn small danger" onclick="deleteCase()">刪除此案件</button></span>`;
+    if (el.dataset.h !== html) { el.innerHTML = html; el.dataset.h = html; }
+}
+function reloadWith(activeId) { meta.active = activeId; saveMeta(); location.reload(); }
+function switchCase(id) { if (id === meta.active) return; saveToLocalStorage(); reloadWith(id); }
+function addCase() {
+    saveToLocalStorage();
+    const id = 'c' + Date.now().toString(36);
+    meta.cases.push({ id, name: '' });
+    reloadWith(id);
+}
+function renameCase() {
+    const c = meta.cases.find(x => x.id === meta.active);
+    const n = prompt('請輸入案件名稱（例如：王家）', c.name || '');
+    if (n === null) return;
+    c.name = n.trim();
+    saveMeta();
+    renderCases();
+}
+function deleteCase() {
+    if (meta.cases.length <= 1) return toast('至少要保留一個案件');
+    const i = meta.cases.findIndex(x => x.id === meta.active);
+    if (!confirm(`確定要刪除「${caseLabel(meta.cases[i], i)}」嗎？這個案件的資料會全部清除，無法復原。`)) return;
+    try { localStorage.removeItem(keyOf(meta.active)); } catch (e) {}
+    meta.cases.splice(i, 1);
+    reloadWith(meta.cases[Math.max(0, i - 1)].id);
+}
 
 </script>
 </body>
